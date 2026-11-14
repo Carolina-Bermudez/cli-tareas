@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "acciones": [
+    {
+      "nombre": "apartar-copias",
+      "descripcion": "Mueve ficheros duplicados con (1),(2) etc. a la carpeta copias-repetidas",
+      "tipo": "mover",
+      "filtro": {"patron": " \\(\\d+\\)\\." },
+      "destino": "copias-repetidas"
+    },
+    {
+      "nombre": "ordenar-imagenes",
+      "descripcion": "Mueve los .png y los .jpg a una carpeta imagenes",
+      "tipo": "mover",
+      "filtro":{ "extensiones": [".jpg", ".jpeg", ".png"] },
+      "destino": "imagenes"
+    },
+    {
+      "nombre": "ordenar-comprimidos",
+      "descripcion": "Mueve los .zip, .rar y .iso a una carpeta de comprimidos",
+      "tipo": "mover",
+      "filtro": {"extensiones": [".zip", ".rar", ".iso"] },
+      "destino": "comprimidos"
+    }
+  ]
+}
