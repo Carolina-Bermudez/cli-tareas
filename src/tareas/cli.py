@@ -1,6 +1,7 @@
-"""Órdenes de la CLI de tareas: version y listar."""
+"""Órdenes de la CLI de tareas: version, listar y validar."""
 
 from datetime import datetime
+import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -9,7 +10,13 @@ from rich.console import Console
 from rich.markup import escape
 from rich.table import Table
 
-from tareas import __version__
+from tareas import __version__, config, errores
+
+# En Windows la consola puede arrancar con cp1252, que no puede dibujar el
+# «✔» ni las tildes. Se fuerza UTF-8 en la salida si el intérprete lo permite.
+for _flujo in (sys.stdout, sys.stderr):
+    if hasattr(_flujo, "reconfigure"):
+        _flujo.reconfigure(encoding="utf-8")
 
 app = typer.Typer(
     help="Automatiza tareas repetitivas con ficheros desde la terminal.",
@@ -19,6 +26,51 @@ app = typer.Typer(
 
 consola = Console()
 consola_errores = Console(stderr=True)
+
+
+@app.callback()
+def principal(
+    ctx: typer.Context,
+    config_ruta: Annotated[
+        Path,
+        typer.Option(
+            "--config",
+            help="Fichero de configuración de acciones. Por defecto, ./acciones.json.",
+        ),
+    ] = Path("acciones.json"),
+) -> None:
+    """Opciones generales de tareas."""
+    ctx.obj = {"config": config_ruta}
+
+
+@app.command()
+def validar(ctx: typer.Context) -> None:
+    """Comprueba que el fichero de configuración de acciones es válido."""
+    ruta = ctx.obj["config"]
+    try:
+        acciones = config.cargar(ruta)
+    except errores.TareasError as e:
+        consola_errores.print(f"[red]Error:[/red] {escape(e.mensaje)}")
+        raise typer.Exit(e.codigo_salida)
+
+    tabla = Table(title=f"Acciones de {escape(str(ruta))}")
+    tabla.add_column("Nombre")
+    tabla.add_column("Tipo")
+    tabla.add_column("Filtro")
+    tabla.add_column("Extra")
+    for accion in acciones:
+        filtro = accion.get("filtro", {})
+        filtro_resumen = "sí" if filtro else "—"
+        extra_campo = "destino" if "destino" in accion else "plantilla"
+        extra = f"{extra_campo}: {accion[extra_campo]}" if extra_campo in accion else "—"
+        tabla.add_row(escape(accion["nombre"]), escape(accion["tipo"]), filtro_resumen, escape(extra))
+
+    consola.print(tabla)
+    if len(acciones) == 1:
+        resumen = "✔ 1 acción válida"
+    else:
+        resumen = f"✔ {len(acciones)} acciones válidas"
+    consola.print(f"[green]{resumen}[/green]")
 
 
 @app.command()
