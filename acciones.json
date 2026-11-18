@@ -21,6 +21,13 @@
       "tipo": "mover",
       "filtro": {"extensiones": [".zip", ".rar", ".iso"] },
       "destino": "comprimidos"
+    },
+    {
+      "nombre": "ordenar-diagramas",
+      "descripcion": "Mueve los PDF de diagramas de drawio a una carpeta diagramas",
+      "tipo": "mover",
+      "filtro": { "extensiones": [".pdf"], "patron": "(?i)\\.drawio" },
+      "destino": "diagramas"
     }
   ]
 }
