@@ -13,3 +13,12 @@ description: Reglas del fichero acciones.json de la CLI tareas (campos, tipos, f
 - pathlib y shutil; encoding="utf-8"; nunca shell=True; nunca sobrescribir (destino_libre).
 - Toda acción admite --simular y devuelve list[Resultado].
 - Si añades un campo o un tipo nuevo, documéntalo en el README y en esta skill.
+
+## Acciones con IA (semana 3)
+- Tipos con IA: resumir y renombrar-ia.
+- Campos: instrucciones (texto, obligatorio), max_caracteres (500-50000, por defecto 12000), categorias (lista, opcional).
+- resumir admite destino opcional, relativo a la carpeta del fichero; renombrar-ia NO admite destino.
+- La IA va SIEMPRE por ProveedorIA (src/tareas/ia.py): las acciones no importan httpx.
+- --simular nunca llama al modelo: solo cuenta los caracteres que enviaría.
+- La respuesta del modelo nunca se usa tal cual: a_nombre_seguro() la limpia; si queda vacía, «saltado».
+- Sin clave o sin red: IANoDisponible (sale con 4) y las acciones sin IA siguen funcionando.
