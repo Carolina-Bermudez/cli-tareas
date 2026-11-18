@@ -119,3 +119,34 @@ Primero dime el plan; no toques nada todavía.
 **Respuesta a la pregunta del revisor:** Renombrar no crea carpetas, al contrario que Mover, que hace mkdir del destino antes de mover. Con la plantilla {fecha:%Y}/{nombre}{ext} el nuevo nombre está dentro de una carpeta «2026» que no existe, el rename da un OSError y el fichero queda como «saltado». Para que funcionara habría que (1) crear la carpeta antes de renombrar y (2) comprobar que la ruta final no sale de la carpeta procesada. Yo preferí prohibir /, \ y «..» en la plantilla: es más sencillo y seguro, y renombrar solo cambia el nombre; para ordenar en carpetas ya está mover.
 
 **Qué aprendí:** Que el revisor, al no haber escrito el código, ve fallos que el agente que lo escribió no ve. Y que /nueva-accion ahorra escribir, pero la decisión (qué filtro, qué ficheros) sigue siendo mía.
+
+
+## 2026-11-18 · Semana 3: capa IA
+
+**Herramienta:** OpenCode 2 · modelo «Hy4 flash Free» (gratuito, por indicación del profesor). Sin servidor del centro en casa: las ejecuciones reales quedan para la tutoría; he probado con --simular y el modo sin red.
+
+**context7 (MCP):** le pregunté cómo pasar a httpx 0.28 un certificado propio. Llamó a resolve-library-id y query-docs y propuso la forma buena, ssl.create_default_context(cafile=...). Pero exageró: dijo que verify="ruta" no se acepta, y sí se acepta, solo que está obsoleta. context7 me trajo la doc, pero tuve que elegir yo. Después lo desconecté: sus herramientas gastan unos 2.500 caracteres en cada mensaje.
+
+**Proveedor (ia.py y comprobar-ia) · qué corregí:**
+- El plan usaba TareasError (código 1) o ConfigError (3) para los fallos de IA. Le pedí IANoDisponible con código 4, también cuando falta la clave.
+- Mezclaba el certificado con el resto de errores de conexión; le pedí un mensaje propio («falta el certificado del centro»).
+- En el código: modelo por defecto equivocado, faltaba temperature 0.2, max_tokens sin valor por defecto (habría dado error al llamarlo desde las acciones), faltaba Respuesta.resumen(), timeout de 30 s para todo (lo cambié a 60 y 5 para conectar) y find_dotenv(usecwd=True).
+- El agente vio que rich no está declarado en pyproject.toml: lo apunté como mejora.
+
+**resumir-casos · qué corregí:**
+- categorias era obligatoria para todas las acciones con IA: resumir no habría pasado la validación.
+- Faltaba importar ProveedorCentro: --simular no lo detectaba, pero al ejecutar de verdad habría dado un NameError con traza.
+- El mensaje de sistema no decía cómo responder; añadí «Responde SOLO con el resumen en Markdown y en español, sin saludo ni despedida».
+
+**nombrar-descargas · qué corregí:**
+- a_nombre_seguro devolvía la palabra «saltado» si el nombre quedaba vacío: el fichero se habría llamado saltado.pdf. Con la respuesta «../../.bashrc» pasaba exactamente eso. Ahora devuelve "" y RenombrarIA no renombra: marca el fichero como «saltado».
+- Faltaba strip() antes de splitlines(): una línea en blanco al principio dejaba el nombre vacío.
+- renombrar-ia no debe admitir destino (renombra en su carpeta).
+
+**Modo sin red · qué corregí:** el mensaje de confirmación decía «borra ficheros» también al renombrar; ahora dice «cambia tus ficheros. ¿Seguro?».
+
+**Rechacé:** que el agente montara un servidor web falso en mi ordenador para probar su código, y varias investigaciones del entorno que no hacían falta. Es la cuarta vez que intenta hacer pruebas por su cuenta.
+
+**Pruebas que hice yo (sin clave):** comprobar-ia sale con 4 y avisa de que lo demás sigue; resumir-casos --simular dice «enviaría 245 caracteres» sin llamar al modelo; sin --simular sale con 4; nombrar-descargas pregunta antes y, sin IA, no renombra nada; ordenar-imagenes sigue funcionando sin clave.
+
+**Qué aprendí:** que lo que responde un modelo es una entrada más, como lo que teclea un usuario, y hay que limpiarla antes de usarla. Y que --simular no lo prueba todo: hay fallos, como el NameError, que solo aparecen al llamar de verdad al modelo.
