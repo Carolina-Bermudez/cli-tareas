@@ -30,6 +30,20 @@ consola = Console()
 consola_errores = Console(stderr=True)
 
 
+def _fallar(e: errores.TareasError) -> None:
+    """Muestra un TareasError en rojo y sale con su código de salida.
+
+    Si es un error de IA, recuerda que las acciones sin IA siguen funcionando
+    y dónde se pueden consultar.
+    """
+    consola_errores.print(f"[red]Error:[/red] {escape(e.mensaje)}")
+    if isinstance(e, errores.IANoDisponible):
+        consola_errores.print(
+            "Las acciones sin IA siguen funcionando: mira cuáles son con «tareas acciones»."
+        )
+    raise typer.Exit(e.codigo_salida)
+
+
 @app.callback()
 def principal(
     ctx: typer.Context,
@@ -52,8 +66,7 @@ def validar(ctx: typer.Context) -> None:
     try:
         acciones = config.cargar(ruta)
     except errores.TareasError as e:
-        consola_errores.print(f"[red]Error:[/red] {escape(e.mensaje)}")
-        raise typer.Exit(e.codigo_salida)
+        _fallar(e)
 
     tabla = Table(title=f"Acciones de {escape(str(ruta))}")
     tabla.add_column("Nombre")
@@ -81,9 +94,9 @@ def acciones(ctx: typer.Context) -> None:
     ruta = ctx.obj["config"]
     try:
         lista = config.cargar(ruta)
+        motor = Motor(lista)
     except errores.TareasError as e:
-        consola_errores.print(f"[red]Error:[/red] {escape(e.mensaje)}")
-        raise typer.Exit(e.codigo_salida)
+        _fallar(e)
 
     if not lista:
         consola.print(
@@ -95,11 +108,17 @@ def acciones(ctx: typer.Context) -> None:
     tabla.add_column("Nombre")
     tabla.add_column("Tipo")
     tabla.add_column("Descripción")
+    tabla.add_column("IA")
     for accion in lista:
+        # «necesita_ia» está en la clase: se lee a través de la instancia que
+        # ya construyó el motor (False si la clase no lo define).
+        instancia = motor.obtener(accion["nombre"])
+        usa_ia = "sí" if getattr(instancia, "necesita_ia", False) else "—"
         tabla.add_row(
             escape(accion["nombre"]),
             escape(accion["tipo"]),
             escape(accion["descripcion"]),
+            usa_ia,
         )
     consola.print(tabla)
 
@@ -135,8 +154,7 @@ def ejecutar(
     try:
         lista = config.cargar(ruta)
     except errores.TareasError as e:
-        consola_errores.print(f"[red]Error:[/red] {escape(e.mensaje)}")
-        raise typer.Exit(e.codigo_salida)
+        _fallar(e)
 
     motor = Motor(lista)
 
@@ -145,15 +163,14 @@ def ejecutar(
     # motor.ejecutar() más abajo con su propio mensaje.
     accion = motor.obtener(nombre)
     if accion is not None and accion.destructiva and not simular and not si:
-        if not typer.confirm(f"La acción «{nombre}» borra ficheros. ¿Continuar?"):
-            consola.print("[yellow]Cancelado: no se ha borrado nada.[/yellow]")
+        if not typer.confirm(f"La acción «{nombre}» cambia tus ficheros. ¿Seguro?"):
+            consola.print("[yellow]Cancelado: no se ha cambiado nada.[/yellow]")
             raise typer.Exit(1)
 
     try:
         resultados = motor.ejecutar(nombre, carpeta, simular)
     except errores.TareasError as e:
-        consola_errores.print(f"[red]Error:[/red] {escape(e.mensaje)}")
-        raise typer.Exit(e.codigo_salida)
+        _fallar(e)
 
     if not resultados:
         consola.print(
@@ -168,11 +185,19 @@ def ejecutar(
     tabla.add_column("Fichero")
     tabla.add_column("Destino")
     tabla.add_column("Estado")
+    # La columna solo aparece si algún resultado trae detalle, para no añadir
+    # una columna vacía en las acciones que no lo producen.
+    con_detalle = any(resultado.detalle for resultado in resultados)
+    if con_detalle:
+        tabla.add_column("Detalle")
     for resultado in resultados:
         destino = escape(str(resultado.destino)) if resultado.destino is not None else "—"
         color = _COLOR_ESTADO.get(resultado.estado)
         estado = f"[{color}]{resultado.estado}[/{color}]" if color else resultado.estado
-        tabla.add_row(escape(resultado.origen.name), destino, estado)
+        fila = [escape(resultado.origen.name), destino, estado]
+        if con_detalle:
+            fila.append(escape(resultado.detalle))
+        tabla.add_row(*fila)
     consola.print(tabla)
 
     hechos = sum(1 for r in resultados if r.estado == "hecho")
@@ -307,9 +332,8 @@ def comprobar_ia() -> None:
             usuario="Di «hola».",
             max_tokens=5,
         )
-    except errores.IANoDisponible as e:
-        consola_errores.print(f"[red]Error:[/red] {escape(e.mensaje)}")
-        raise typer.Exit(e.codigo_salida)
+    except errores.TareasError as e:
+        _fallar(e)
 
     consola.print(
         f"[green]✔ IA disponible[/green] · {respuesta.segundos:.2f} s · "
