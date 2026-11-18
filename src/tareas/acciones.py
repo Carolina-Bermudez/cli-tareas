@@ -105,7 +105,7 @@ class Accion(ABC):
         for n, fichero in enumerate(ficheros, start=1):
             try:
                 resultados.append(self.aplicar(fichero, n, simular))
-            except OSError:
+            except (OSError, ValueError):
                 resultados.append(Resultado(fichero, None, "saltado"))
         return resultados
 

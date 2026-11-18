@@ -174,6 +174,15 @@ def _validar_plantilla(nombre: str, tipo: str, plantilla: Any) -> None:
         return
     if not isinstance(plantilla, str) or not plantilla:
         raise AccionNoValida(nombre, "plantilla", "es obligatoria para el tipo «renombrar»")
+    # Revisamos la cadena completa (incluidos los formatos dentro de los
+    # huecos): un separador o «..» sacaría el nombre de la carpeta procesada.
+    if "/" in plantilla or "\\" in plantilla or ".." in plantilla:
+        raise AccionNoValida(
+            nombre,
+            "plantilla",
+            "no puede contener /, \\ ni «..»: el nuevo nombre debe quedarse "
+            "dentro de la carpeta que se procesa",
+        )
     restante = _HUECO_VALIDO.sub("", plantilla)
     if "{" in restante or "}" in restante:
         raise AccionNoValida(

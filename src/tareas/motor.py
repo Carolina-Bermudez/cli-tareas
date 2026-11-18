@@ -50,8 +50,17 @@ class Motor:
         megas = filtro.get("mayor_que_mb")
         ahora = time.time()
 
+        try:
+            entradas = sorted(
+                carpeta.iterdir(), key=lambda ruta: ruta.name.casefold()
+            )
+        except OSError:
+            raise TareasError(
+                f"no se puede leer el contenido de la carpeta «{carpeta}»"
+            ) from None
+
         seleccionados: list[Path] = []
-        for entrada in sorted(carpeta.iterdir(), key=lambda ruta: ruta.name.casefold()):
+        for entrada in entradas:
             try:
                 if not entrada.is_file():
                     continue
