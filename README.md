@@ -98,4 +98,4 @@ Con la orden `tareas ejecutar ordenar-imagenes ~/Downloads`, las imágenes van a
 - Los ficheros .tar.gz no se reconocen como comprimidos, porque Python solo ve la extensión .gz.
 - En Windows, renombrar cambiando solo mayúsculas (foto.jpg → FOTO.jpg) crea un duplicado «(1)».
 - destino_libre comprueba si el destino existe y escribe después; si otro programa creara el mismo fichero en ese instante, podría sobrescribirse. En una herramienta de uso personal es muy poco probable.
-- Una carpeta repetida con «\» dentro del destino se interpreta distinto en Linux y en Windows.
+- Un «\» dentro del destino (por ejemplo, "imagenes\2026") se interpreta distinto en Linux y en Windows.
