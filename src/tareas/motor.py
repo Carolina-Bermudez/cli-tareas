@@ -25,6 +25,14 @@ class Motor:
             accion["nombre"]: Accion.desde_config(accion) for accion in acciones
         }
 
+    def obtener(self, nombre: str) -> Accion | None:
+        """Devuelve la acción «nombre» o None si no existe, sin ejecutarla.
+
+        Para que quien llama (cli.py) pueda mirar propiedades como
+        ``destructiva`` antes de decidir si pide confirmación.
+        """
+        return self._acciones.get(nombre)
+
     def seleccionar(self, carpeta: Path, filtro: dict | None = None) -> list[Path]:
         """Ficheros de la carpeta que cumplen el filtro, por nombre (A→Z).
 

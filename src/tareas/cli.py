@@ -1,4 +1,4 @@
-"""Órdenes de la CLI de tareas: version, listar y validar."""
+"""Órdenes de la CLI de tareas: version, listar, validar, acciones y ejecutar."""
 
 from datetime import datetime
 import sys
@@ -11,6 +11,7 @@ from rich.markup import escape
 from rich.table import Table
 
 from tareas import __version__, config, errores
+from tareas.motor import Motor
 
 # En Windows la consola puede arrancar con cp1252, que no puede dibujar el
 # «✔» ni las tildes. Se fuerza UTF-8 en la salida si el intérprete lo permite.
@@ -71,6 +72,119 @@ def validar(ctx: typer.Context) -> None:
     else:
         resumen = f"✔ {len(acciones)} acciones válidas"
     consola.print(f"[green]{resumen}[/green]")
+
+
+@app.command("acciones")
+def acciones(ctx: typer.Context) -> None:
+    """Muestra las acciones definidas en el fichero de configuración."""
+    ruta = ctx.obj["config"]
+    try:
+        lista = config.cargar(ruta)
+    except errores.TareasError as e:
+        consola_errores.print(f"[red]Error:[/red] {escape(e.mensaje)}")
+        raise typer.Exit(e.codigo_salida)
+
+    if not lista:
+        consola.print(
+            f"[yellow]El fichero [bold]{escape(str(ruta))}[/bold] no define ninguna acción.[/yellow]"
+        )
+        return
+
+    tabla = Table(title=f"Acciones de {escape(str(ruta))}")
+    tabla.add_column("Nombre")
+    tabla.add_column("Tipo")
+    tabla.add_column("Descripción")
+    for accion in lista:
+        tabla.add_row(
+            escape(accion["nombre"]),
+            escape(accion["tipo"]),
+            escape(accion["descripcion"]),
+        )
+    consola.print(tabla)
+
+
+# Colores del estado de cada resultado, para leer la tabla de un vistazo.
+_COLOR_ESTADO = {"hecho": "green", "simulado": "yellow", "saltado": "red"}
+
+
+@app.command()
+def ejecutar(
+    ctx: typer.Context,
+    nombre: Annotated[
+        str,
+        typer.Argument(help="Nombre de la acción a ejecutar."),
+    ],
+    carpeta: Annotated[
+        Path | None,
+        typer.Argument(
+            help="Carpeta sobre la que actuar. Por defecto, el «origen» de la acción o la actual. Acepta rutas con ~.",
+        ),
+    ] = None,
+    simular: Annotated[
+        bool,
+        typer.Option("--simular", help="Muestra qué haría la acción sin tocar ningún fichero."),
+    ] = False,
+    si: Annotated[
+        bool,
+        typer.Option("--si", help="No pide confirmación en las acciones destructivas."),
+    ] = False,
+) -> None:
+    """Ejecuta la acción «nombre» sobre una carpeta de ficheros."""
+    ruta = ctx.obj["config"]
+    try:
+        lista = config.cargar(ruta)
+    except errores.TareasError as e:
+        consola_errores.print(f"[red]Error:[/red] {escape(e.mensaje)}")
+        raise typer.Exit(e.codigo_salida)
+
+    motor = Motor(lista)
+
+    # La confirmación va ANTES de ejecutar nada: si es destructiva y no hay
+    # --simular ni --si, se pregunta. El nombre desconocido lo detecta
+    # motor.ejecutar() más abajo con su propio mensaje.
+    accion = motor.obtener(nombre)
+    if accion is not None and accion.destructiva and not simular and not si:
+        if not typer.confirm(f"La acción «{nombre}» borra ficheros. ¿Continuar?"):
+            consola.print("[yellow]Cancelado: no se ha borrado nada.[/yellow]")
+            raise typer.Exit(1)
+
+    try:
+        resultados = motor.ejecutar(nombre, carpeta, simular)
+    except errores.TareasError as e:
+        consola_errores.print(f"[red]Error:[/red] {escape(e.mensaje)}")
+        raise typer.Exit(e.codigo_salida)
+
+    if not resultados:
+        consola.print(
+            "[yellow]Ningún fichero cumple el filtro de la acción; no hay nada que hacer.[/yellow]"
+        )
+        return
+
+    titulo = f"Acción {escape(nombre)}"
+    if simular:
+        titulo += " (simulación)"
+    tabla = Table(title=titulo)
+    tabla.add_column("Fichero")
+    tabla.add_column("Destino")
+    tabla.add_column("Estado")
+    for resultado in resultados:
+        destino = escape(str(resultado.destino)) if resultado.destino is not None else "—"
+        color = _COLOR_ESTADO.get(resultado.estado)
+        estado = f"[{color}]{resultado.estado}[/{color}]" if color else resultado.estado
+        tabla.add_row(escape(resultado.origen.name), destino, estado)
+    consola.print(tabla)
+
+    hechos = sum(1 for r in resultados if r.estado == "hecho")
+    simulados = sum(1 for r in resultados if r.estado == "simulado")
+    saltados = sum(1 for r in resultados if r.estado == "saltado")
+    consola.print(
+        f"[green]✔ {hechos} hechos[/green] · {simulados} simulados · {saltados} saltados"
+    )
+
+    if simular:
+        consola.print(
+            "[yellow]Para hacerlo de verdad, repite la orden sin --simular.[/yellow]"
+        )
 
 
 @app.command()
