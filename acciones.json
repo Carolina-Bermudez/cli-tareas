@@ -37,6 +37,15 @@
         "extensiones": [".exe", ".msi"],
         "mas_antiguo_que_dias": 30
       }
+    },
+        {
+      "nombre": "resumir-casos",
+      "descripcion": "Resume cada caso práctico o tema en un .md para estudiar",
+      "tipo": "resumir",
+      "filtro": { "extensiones": [".pdf", ".txt", ".md"] },
+      "destino": "resumenes",
+      "instrucciones": "Resume en 5 viñetas como máximo. Acaba con una línea que empiece por «Para el examen:» y diga, en una frase, lo que más cuenta.",
+      "max_caracteres": 12000
     }
   ]
 }

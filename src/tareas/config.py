@@ -17,11 +17,18 @@ CAMPOS_ACCION = {
     "destino",
     "plantilla",
     "confirmar",
+    "instrucciones",
+    "max_caracteres",
+    "categorias",
 }
 CAMPOS_FILTRO = {"extensiones", "patron", "mas_antiguo_que_dias", "mayor_que_mb"}
 
-TIPOS_VALIDOS = {"mover", "copiar", "renombrar", "borrar"}
+# Las acciones de IA ahora mismo son solo «resumir»; «categorias» se guarda
+# para futuras acciones de clasificación, pero Resumir no lo usa en el prompt.
+TIPOS_IA = {"resumir"}
+TIPOS_VALIDOS = {"mover", "copiar", "renombrar", "borrar"} | TIPOS_IA
 TIPOS_CON_DESTINO = {"mover", "copiar"}
+MAX_CARACTERES_POR_DEFECTO = 12000
 
 # nombre: minúsculas, dígitos y guiones que separen palabras.
 _NOMBRE_VALIDO = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*")
@@ -96,8 +103,12 @@ def _validar_accion(indice: int, accion: Any, nombres: set[str]) -> dict:
     _validar_plantilla(nombre, tipo, accion.get("plantilla"))
     _validar_confirmar(nombre, accion.get("confirmar"))
     _validar_filtro(nombre, accion.get("filtro"))
+    campos_ia = _validar_ia(nombre, tipo, accion)
 
-    return dict(accion)
+    # Lo normalizado (en especial el tope por defecto) viaja con la acción.
+    datos = dict(accion)
+    datos.update(campos_ia)
+    return datos
 
 
 def _validar_nombre(nombre: Any, etiqueta: str, nombres: set[str]) -> str:
@@ -137,29 +148,35 @@ def _validar_origen(nombre: str, origen: Any) -> None:
 
 
 def _validar_destino(nombre: str, tipo: str, destino: Any) -> None:
-    if tipo in TIPOS_CON_DESTINO:
-        if not isinstance(destino, str) or not destino:
+    permitido = tipo in TIPOS_CON_DESTINO or tipo in TIPOS_IA
+    if not permitido:
+        if destino is not None:
+            raise AccionNoValida(
+                nombre,
+                "destino",
+                f"no se usa con el tipo «{tipo}»; solo con mover, copiar y resumir",
+            )
+        return
+    if destino is None:
+        if tipo in TIPOS_CON_DESTINO:
             raise AccionNoValida(
                 nombre,
                 "destino",
                 f"es obligatorio para el tipo «{tipo}»",
             )
-        ruta_destino = Path(destino)
-        # En Windows «/imagenes» o «C:imagenes» no son absolutos según
-        # is_absolute(), pero al unirlos escapan de la carpeta procesada;
-        # un ancla no vacía (letra de unidad, / o \ inicial) delata eso.
-        if ruta_destino.anchor or ".." in ruta_destino.parts:
-            raise AccionNoValida(
-                nombre,
-                "destino",
-                "debe ser relativo a la carpeta que se procesa, sin «..», "
-                "sin letra de unidad y sin empezar por / o \\",
-            )
-    elif destino is not None:
+        return  # En resumir es opcional: se escribe junto al fichero.
+    if not isinstance(destino, str) or not destino:
+        raise AccionNoValida(nombre, "destino", "debe ser una cadena con texto")
+    ruta_destino = Path(destino)
+    # En Windows «/imagenes» o «C:imagenes» no son absolutos según
+    # is_absolute(), pero al unirlos escapan de la carpeta procesada;
+    # un ancla no vacía (letra de unidad, / o \ inicial) delata eso.
+    if ruta_destino.anchor or ".." in ruta_destino.parts:
         raise AccionNoValida(
             nombre,
             "destino",
-            f"no se usa con el tipo «{tipo}»; solo con mover y copiar",
+            "debe ser relativo a la carpeta que se procesa, sin «..», "
+            "sin letra de unidad y sin empezar por / o \\",
         )
 
 
@@ -260,3 +277,63 @@ def _validar_numero(nombre: str, filtro: dict, campo: str, unidad: str) -> None:
             "filtro",
             f"el campo «{campo}» debe ser un número de {unidad} mayor o igual que 0",
         )
+
+
+def _validar_ia(nombre: str, tipo: str, accion: dict) -> dict:
+    """Valida los campos de las acciones de IA y devuelve los normalizados.
+
+    Las acciones que no son de IA no pueden usar estos campos, igual que no
+    pueden usar «plantilla» si no son «renombrar».
+    """
+    instrucciones = accion.get("instrucciones")
+    max_caracteres = accion.get("max_caracteres")
+    categorias = accion.get("categorias")
+
+    if tipo not in TIPOS_IA:
+        for campo, valor in (
+            ("instrucciones", instrucciones),
+            ("max_caracteres", max_caracteres),
+            ("categorias", categorias),
+        ):
+            if valor is not None:
+                raise AccionNoValida(
+                    nombre,
+                    campo,
+                    f"no se usa con el tipo «{tipo}»; solo con resumir",
+                )
+        return {}
+
+    if not isinstance(instrucciones, str) or not instrucciones.strip():
+        raise AccionNoValida(
+            nombre, "instrucciones", "falta o no es una cadena con texto"
+        )
+
+    if max_caracteres is None:
+        max_caracteres = MAX_CARACTERES_POR_DEFECTO
+    else:
+        correcto = (
+            not isinstance(max_caracteres, bool)
+            and isinstance(max_caracteres, int)
+            and 500 <= max_caracteres <= 50000
+        )
+        if not correcto:
+            raise AccionNoValida(
+                nombre, "max_caracteres", "debe ser un entero entre 500 y 50000"
+            )
+
+    if categorias is not None and (
+        not isinstance(categorias, list)
+        or not categorias
+        or any(not isinstance(c, str) or not c.strip() for c in categorias)
+    ):
+        raise AccionNoValida(
+            nombre, "categorias", "debe ser una lista no vacía de cadenas con texto"
+        )
+
+    normalizadas = {
+        "instrucciones": instrucciones,
+        "max_caracteres": max_caracteres,
+    }
+    if categorias is not None:
+        normalizadas["categorias"] = categorias
+    return normalizadas
