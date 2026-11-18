@@ -11,6 +11,7 @@ from rich.markup import escape
 from rich.table import Table
 
 from tareas import __version__, config, errores
+from tareas.ia import ProveedorCentro
 from tareas.motor import Motor
 
 # En Windows la consola puede arrancar con cp1252, que no puede dibujar el
@@ -290,3 +291,28 @@ def _tipo(nombre: str, es_carpeta: bool) -> str:
         return "carpeta"
     extension = Path(nombre).suffix.lstrip(".").lower()
     return extension if extension else "sin extensión"
+
+
+@app.command("comprobar-ia")
+def comprobar_ia() -> None:
+    """Comprueba el servidor de IA, el modelo y la clave con una pregunta mínima."""
+    try:
+        proveedor = ProveedorCentro.desde_entorno()
+        consola.print(f"servidor: {escape(proveedor.url)}")
+        consola.print(f"modelo: {escape(proveedor.modelo)}")
+        # La clave solo se nombra: su valor nunca se escribe en la terminal.
+        consola.print("clave: definida")
+        respuesta = proveedor.completar(
+            sistema="Responde siempre con una sola palabra.",
+            usuario="Di «hola».",
+            max_tokens=5,
+        )
+    except errores.IANoDisponible as e:
+        consola_errores.print(f"[red]Error:[/red] {escape(e.mensaje)}")
+        raise typer.Exit(e.codigo_salida)
+
+    consola.print(
+        f"[green]✔ IA disponible[/green] · {respuesta.segundos:.2f} s · "
+        f"{respuesta.tokens_entrada} tokens de entrada, {respuesta.tokens_salida} de salida"
+    )
+    consola.print(f"Respuesta: {escape(respuesta.texto)}")

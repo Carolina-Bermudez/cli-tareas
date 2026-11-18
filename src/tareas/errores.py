@@ -34,3 +34,9 @@ class AccionNoValida(ConfigError):
         self.accion = accion
         self.campo = campo
         self.motivo = motivo
+
+
+class IANoDisponible(TareasError):
+    """El servidor de IA no está configurado, no responde o no se puede usar."""
+
+    codigo_salida = 4
