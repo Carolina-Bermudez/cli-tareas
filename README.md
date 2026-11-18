@@ -92,3 +92,10 @@ Con la orden `tareas ejecutar ordenar-imagenes ~/Downloads`, las imágenes van a
 - Las acciones de tipo `borrar` piden confirmación, salvo que uses `--si`.
 - Orden recomendado con mi carpeta de descargas: primero `apartar-copias` y después las demás, para que una imagen repetida no acabe en la carpeta de imágenes.
 
+## Mejoras pendientes
+
+- Distinguir «la carpeta está vacía» de «ningún fichero cumple el filtro»: ahora los dos casos muestran el mismo aviso.
+- Los ficheros .tar.gz no se reconocen como comprimidos, porque Python solo ve la extensión .gz.
+- En Windows, renombrar cambiando solo mayúsculas (foto.jpg → FOTO.jpg) crea un duplicado «(1)».
+- destino_libre comprueba si el destino existe y escribe después; si otro programa creara el mismo fichero en ese instante, podría sobrescribirse. En una herramienta de uso personal es muy poco probable.
+- Una carpeta repetida con «\» dentro del destino se interpreta distinto en Linux y en Windows.
