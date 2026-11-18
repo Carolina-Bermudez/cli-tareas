@@ -28,6 +28,15 @@
       "tipo": "mover",
       "filtro": { "extensiones": [".pdf"], "patron": "(?i)\\.drawio" },
       "destino": "diagramas"
+    },
+    {
+      "nombre": "limpiar-instaladores",
+      "descripcion": "Borra los instaladores .exe y .msi con más de 30 días",
+      "tipo": "borrar",
+      "filtro": {
+        "extensiones": [".exe", ".msi"],
+        "mas_antiguo_que_dias": 30
+      }
     }
   ]
 }
