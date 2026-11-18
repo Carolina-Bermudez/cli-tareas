@@ -23,9 +23,9 @@ CAMPOS_ACCION = {
 }
 CAMPOS_FILTRO = {"extensiones", "patron", "mas_antiguo_que_dias", "mayor_que_mb"}
 
-# Las acciones de IA ahora mismo son solo «resumir»; «categorias» se guarda
-# para futuras acciones de clasificación, pero Resumir no lo usa en el prompt.
-TIPOS_IA = {"resumir"}
+# Las acciones de IA son «resumir» y «renombrar-ia»; «categorias» se guarda
+# para futuras acciones de clasificación, pero ninguna la usa en el prompt.
+TIPOS_IA = {"resumir", "renombrar-ia"}
 TIPOS_VALIDOS = {"mover", "copiar", "renombrar", "borrar"} | TIPOS_IA
 TIPOS_CON_DESTINO = {"mover", "copiar"}
 MAX_CARACTERES_POR_DEFECTO = 12000
@@ -148,7 +148,11 @@ def _validar_origen(nombre: str, origen: Any) -> None:
 
 
 def _validar_destino(nombre: str, tipo: str, destino: Any) -> None:
-    permitido = tipo in TIPOS_CON_DESTINO or tipo in TIPOS_IA
+    # «resumir» admite destino opcional; «renombrar-ia» renombra en la misma
+    # carpeta, así que no puede llevarlo.
+    permitido = tipo in TIPOS_CON_DESTINO or (
+        tipo in TIPOS_IA and tipo != "renombrar-ia"
+    )
     if not permitido:
         if destino is not None:
             raise AccionNoValida(
@@ -299,7 +303,7 @@ def _validar_ia(nombre: str, tipo: str, accion: dict) -> dict:
                 raise AccionNoValida(
                     nombre,
                     campo,
-                    f"no se usa con el tipo «{tipo}»; solo con resumir",
+                    f"no se usa con el tipo «{tipo}»; solo con resumir y renombrar-ia",
                 )
         return {}
 

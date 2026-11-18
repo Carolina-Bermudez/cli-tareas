@@ -38,7 +38,7 @@
         "mas_antiguo_que_dias": 30
       }
     },
-        {
+    {
       "nombre": "resumir-casos",
       "descripcion": "Resume cada caso práctico o tema en un .md para estudiar",
       "tipo": "resumir",
@@ -46,6 +46,13 @@
       "destino": "resumenes",
       "instrucciones": "Resume en 5 viñetas como máximo. Acaba con una línea que empiece por «Para el examen:» y diga, en una frase, lo que más cuenta.",
       "max_caracteres": 12000
+    },
+    {
+      "nombre": "nombrar-descargas",
+      "descripcion": "Pone a los PDF con nombre genérico (descarga, documento…) un nombre que diga lo que son",
+      "tipo": "renombrar-ia",
+      "filtro": { "extensiones": [".pdf", ".txt"], "patron": "(?i)^(descarga|documento|escaneo|scan)" },
+      "instrucciones": "Propón un nombre que diga de qué trata el documento, por ejemplo el tema o la asignatura."
     }
   ]
 }
