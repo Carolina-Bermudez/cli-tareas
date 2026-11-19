@@ -175,7 +175,11 @@ def _validar_destino(nombre: str, tipo: str, destino: Any) -> None:
     # En Windows «/imagenes» o «C:imagenes» no son absolutos según
     # is_absolute(), pero al unirlos escapan de la carpeta procesada;
     # un ancla no vacía (letra de unidad, / o \ inicial) delata eso.
-    if ruta_destino.anchor or ".." in ruta_destino.parts:
+    if (
+        destino.startswith("~")
+        or ruta_destino.anchor
+        or ".." in ruta_destino.parts
+    ):
         raise AccionNoValida(
             nombre,
             "destino",
