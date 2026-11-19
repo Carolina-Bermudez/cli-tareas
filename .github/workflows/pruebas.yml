@@ -1,0 +1,24 @@
+# Se ejecuta en cada push y en cada pull request.
+name: pruebas
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  # Un trabajo por sistema operativo de la matriz; fail-fast desactivado.
+  pruebas:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      # Descarga el código del repositorio.
+      - uses: actions/checkout@v5
+      # Instala uv y configura Python 3.12 en cada SO de la matriz.
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      # Ejecuta las pruebas en modo verboso.
+      - run: uv run pytest -v
