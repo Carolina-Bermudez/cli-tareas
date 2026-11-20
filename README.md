@@ -12,16 +12,28 @@ Mi herramienta de línea de órdenes para automatizar tareas repetitivas con fic
 7. **Nunca hará:** borrar sin preguntar ni tocar ficheros fuera de la carpeta que le indique.
 8. **Plataformas:** Windows primero; también Linux y macOS.
 9. **Códigos de salida:** 0 bien · 1 fallo al ejecutar · 2 uso incorrecto · 3 configuración inválida.
-10. **Instalación:** `uv tool install --editable .` (lo completo en la semana 4).
+10. **Instalación:** `uv tool install git+https://github.com/Carolina-Bermudez/cli-tareas@v1.0.0` (lo completo en la semana 4).
 
 ## Instalación
 
-Necesitas [uv](https://docs.astral.sh/uv/) y Git.
+Necesitas [uv](https://docs.astral.sh/uv/) (instala Python solo si hace falta).
 
-    git clone https://github.com/Carolina-Bermudez/cli-tareas.git
-    cd cli-tareas
-    uv tool install --editable .
+    uv tool install git+https://github.com/Carolina-Bermudez/cli-tareas@v1.0.0
     tareas --help
+    tareas version        # debe decir: tareas 1.0.0
+
+Para desinstalarla:
+
+    uv tool uninstall tareas
+
+## Primeros pasos
+
+1. Copia `acciones.json` de este repositorio en tu carpeta.
+2. Comprueba que está bien: `tareas validar`
+3. Mira qué haría, sin tocar nada: `tareas ejecutar ordenar-imagenes ~/Downloads --simular`
+4. Si te convence, repite la orden sin `--simular`.
+
+Las acciones con IA son opcionales: sin el `.env`, avisan con un mensaje claro y todas las demás siguen funcionando.
 
 ## Formato de acciones.json
 
