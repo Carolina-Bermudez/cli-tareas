@@ -150,3 +150,23 @@ Primero dime el plan; no toques nada todavía.
 **Pruebas que hice yo (sin clave):** comprobar-ia sale con 4 y avisa de que lo demás sigue; resumir-casos --simular dice «enviaría 245 caracteres» sin llamar al modelo; sin --simular sale con 4; nombrar-descargas pregunta antes y, sin IA, no renombra nada; ordenar-imagenes sigue funcionando sin clave.
 
 **Qué aprendí:** que lo que responde un modelo es una entrada más, como lo que teclea un usuario, y hay que limpiarla antes de usarla. Y que --simular no lo prueba todo: hay fallos, como el NameError, que solo aparecen al llamar de verdad al modelo.
+
+## 2026-11-19/20 · Semana 4: pruebas y release
+
+**Herramienta:** OpenCode 2 · Tidepool Alpha Free (los modelos gratuitos cambian: antes usé GLM-5.3 y Hy4). Va lento: escribir test_config.py y test_acciones.py tardó 17 minutos.
+
+**Plan de pruebas · qué corregí:** el agente propuso más de cien casos; le pedí unas 28 que yo pudiera explicar, con destinos relativos ("PDF") porque mi config.py rechaza las rutas absolutas y con ~. Quité su «disyuntor» de httpx: habría impedido probar de verdad el caso sin red.
+
+**Una prueba encontró un fallo real:** «destino": "~/PDF"» no se rechazaba (no tiene ancla ni «..»), y habría creado una carpeta llamada «~». Hice el commit de la prueba en rojo y después el arreglo en config.py. En el diff del arreglo el agente escribió «ruta_destivo»: lo rechacé, habría dado NameError en todas las acciones.
+
+**Mutación:** saqué el mkdir de Mover fuera del «if simular» y test_simular_no_toca_el_disco se puso en rojo (assert not (descargas / "PDF").exists()). Con git restore volvió a verde: la prueba sí protege.
+
+**IA sin red:** ProveedorFalso responde lo que yo le digo y apunta las preguntas. Comprobé que los resultados esperados de a_nombre_seguro eran los correctos y no una copia de lo que devolvía el código. «../../.bashrc» deja el fichero «saltado».
+
+**Resultado:** 33 pruebas (config, acciones, IA y CLI con los códigos 0 a 4), en verde en GitHub Actions en Ubuntu, Windows y macOS a la primera.
+
+**opencode run:** adapté revisar.sh a PowerShell (scripts/revisar.ps1), porque trabajo en Windows: timeout no existe y usé Start-Job con Wait-Job. La primera vez el revisor no respondió en 180 s y el script salió con 1 sin quedarse colgado; subí el límite a 300. Al revisor se le denegó ejecutar ls (sin nadie delante, «ask» es «no») y encontró que las tildes del diff llegaban como «??»: lo arreglé forzando UTF-8.
+
+**Release:** rama release-1.0 con versión 1.0.0, CHANGELOG y README; PR con 6 comprobaciones en verde; etiqueta v1.0.0 y release en GitHub. Lo probé desinstalando mi versión y con «uv tool install git+https://github.com/Carolina-Bermudez/cli-tareas@v1.0.0»: tareas version dice 1.0.0.
+
+**Qué aprendí:** que una prueba en verde no basta: hay que romper el código para saber si protege. Y que el agente escribe las pruebas, pero quien decide qué debe pasar soy yo.
